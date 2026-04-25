@@ -1,0 +1,76 @@
+# MwanaBot
+
+MwanaBot est un assistant francophone, amical et orienté assistance pour l'application mobile EduFrais.
+Il utilise `gemini-2.5-flash`, LangGraph, Pydantic, FastAPI et un RAG Pinecone.
+
+## Installation
+
+```powershell
+cd "C:\Users\User\source\repos\EduFrais Project\MwanaBot"
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+pip install -e ".[dev]"
+```
+
+Complétez `.env` avec votre clé Pinecone. La clé Gemini fournie est déjà placée dans `.env`.
+
+## Lancer l'API
+
+```powershell
+uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
+```
+
+Endpoint principal:
+
+```http
+POST http://127.0.0.1:8010/chat
+Content-Type: application/json
+
+{
+  "message": "Comment puis-je consulter mes frais scolaires ?",
+  "user_id": "parent-123"
+}
+```
+
+Endpoint streaming pour l'application mobile:
+
+```http
+POST http://127.0.0.1:8010/chat/stream
+Content-Type: application/json
+Accept: text/event-stream
+
+{
+  "message": "Comment puis-je payer les frais scolaires ?",
+  "user_id": "parent-123",
+  "conversation_id": "conv-123"
+}
+```
+
+Le flux retourne des Server-Sent Events:
+
+```text
+event: start
+data: {"conversation_id":"conv-123","bot":"MwanaBot"}
+
+event: sources
+data: {"sources":[]}
+
+event: token
+data: {"content":"Bonjour"}
+
+event: done
+data: {"answer":"Bonjour ...","conversation_id":"conv-123"}
+```
+
+## Ajouter des documents au RAG
+
+Placez vos documents `.txt`, `.md` ou `.pdf` dans `data/documents`, puis lancez:
+
+```powershell
+python .\scripts\ingest_documents.py .\data\documents
+```
+
+## Ajouter les outils SchoolFees
+
+Les futurs outils qui appelleront l'API .NET Core peuvent être ajoutés dans `app/tools.py`.
+Le graphe est déjà prêt à utiliser les résultats des outils dans la réponse finale.
