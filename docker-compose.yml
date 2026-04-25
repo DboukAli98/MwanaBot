@@ -1,0 +1,9 @@
+services:
+  mwanabot:
+    build:
+      context: .
+    image: mwanabot:local
+    ports:
+      - "8010:8010"
+    env_file:
+      - .env

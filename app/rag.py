@@ -10,7 +10,7 @@ from pinecone import Pinecone, ServerlessSpec
 from app.config import Settings
 
 
-EMBEDDING_MODEL = "models/text-embedding-004"
+EMBEDDING_MODEL = "gemini-embedding-001"
 EMBEDDING_DIMENSION = 768
 
 
@@ -23,6 +23,7 @@ class RagStore:
         self.embeddings = GoogleGenerativeAIEmbeddings(
             model=EMBEDDING_MODEL,
             google_api_key=settings.google_api_key,
+            output_dimensionality=EMBEDDING_DIMENSION,
         )
         self.client = Pinecone(api_key=settings.pinecone_api_key)
         self._ensure_index()

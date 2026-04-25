@@ -1,3 +1,26 @@
+Metadata-Version: 2.4
+Name: mwanabot
+Version: 0.1.0
+Summary: Assistant RAG francophone pour l'application mobile EduFrais.
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi>=0.115.0
+Requires-Dist: uvicorn[standard]>=0.30.0
+Requires-Dist: pydantic>=2.8.0
+Requires-Dist: pydantic-settings>=2.4.0
+Requires-Dist: python-dotenv>=1.0.1
+Requires-Dist: langgraph>=0.2.0
+Requires-Dist: langchain-core>=0.3.0
+Requires-Dist: langchain-text-splitters>=0.3.0
+Requires-Dist: langchain-google-genai>=2.0.0
+Requires-Dist: langchain-pinecone>=0.2.0
+Requires-Dist: pinecone>=5.0.0
+Requires-Dist: httpx>=0.27.0
+Requires-Dist: pypdf>=5.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.0; extra == "dev"
+Requires-Dist: ruff>=0.6.0; extra == "dev"
+
 # MwanaBot
 
 MwanaBot est un assistant francophone, amical et orienté assistance pour l'application mobile EduFrais.
@@ -18,34 +41,6 @@ Complétez `.env` avec votre clé Pinecone. La clé Gemini fournie est déjà pl
 
 ```powershell
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8010
-```
-
-## Docker
-
-Construire l'image localement:
-
-```powershell
-docker build -t mwanabot:local .
-```
-
-Lancer le conteneur avec les variables de `.env`:
-
-```powershell
-docker run --env-file .env -p 8010:8010 mwanabot:local
-```
-
-Ou avec Docker Compose:
-
-```powershell
-docker compose up --build
-```
-
-Publier dans Azure Container Registry:
-
-```powershell
-az acr login --name <acr-name>
-docker tag mwanabot:local <acr-name>.azurecr.io/mwanabot:latest
-docker push <acr-name>.azurecr.io/mwanabot:latest
 ```
 
 Endpoint principal:

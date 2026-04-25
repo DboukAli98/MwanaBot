@@ -21,9 +21,16 @@ def read_document(file_path: Path) -> str:
     return file_path.read_text(encoding="utf-8")
 
 
+def iter_input_files(path: Path):
+    if path.is_file():
+        yield path
+        return
+    yield from path.rglob("*")
+
+
 def iter_document_texts(path: Path):
     splitter = RecursiveCharacterTextSplitter(chunk_size=1200, chunk_overlap=180)
-    for file_path in path.rglob("*"):
+    for file_path in iter_input_files(path):
         if not file_path.is_file() or file_path.suffix.lower() not in SUPPORTED_EXTENSIONS:
             continue
         text = read_document(file_path)
@@ -37,8 +44,9 @@ def iter_document_texts(path: Path):
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ingère des documents EduFrais dans Pinecone.")
-    parser.add_argument("path", type=Path, help="Dossier contenant des documents .txt ou .md.")
+    parser.add_argument("path", type=Path, help="Fichier ou dossier contenant des documents .txt, .md ou .pdf.")
     parser.add_argument("--namespace", default=None, help="Namespace Pinecone optionnel.")
+    parser.add_argument("--role", default=None, help="Role utilisateur associe au document.")
     args = parser.parse_args()
 
     load_dotenv()
@@ -46,6 +54,8 @@ def main() -> None:
 
     added = 0
     for text, metadata in iter_document_texts(args.path):
+        if args.role:
+            metadata["role"] = args.role
         added += store.add_texts([text], namespace=args.namespace, metadata=metadata)
 
     print(f"{added} document(s) ajoute(s) au RAG.")

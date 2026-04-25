@@ -2,9 +2,11 @@ from typing import TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import END, StateGraph
 
 from app.config import Settings
+from app.memory import session_memory
 from app.prompts import SYSTEM_PROMPT
 from app.rag import RagStore, format_documents
 
@@ -12,9 +14,19 @@ from app.rag import RagStore, format_documents
 class MwanaBotState(TypedDict, total=False):
     question: str
     namespace: str | None
+    thread_id: str
+    username: str | None
+    role: str | None
     context: str
     sources: list[dict]
     answer: str
+
+
+def format_history(thread_id: str) -> str:
+    history = session_memory.get(thread_id)
+    if not history:
+        return "Aucun historique."
+    return "\n".join(f"{message['role']}: {message['content']}" for message in history[-10:])
 
 
 def build_graph(settings: Settings):
@@ -30,7 +42,7 @@ def build_graph(settings: Settings):
         if rag_store is None:
             return {
                 **state,
-                "context": "Le RAG Pinecone n'est pas encore configuré.",
+                "context": "Le RAG Pinecone n'est pas encore configure.",
                 "sources": [],
             }
 
@@ -48,13 +60,19 @@ def build_graph(settings: Settings):
         }
 
     async def generate(state: MwanaBotState) -> MwanaBotState:
+        username = state.get("username") or "Non fourni"
+        role = state.get("role") or state.get("namespace") or "Non fourni"
         prompt = (
+            f"Utilisateur authentifie:\nNom: {username}\nRole: {role}\n\n"
+            f"Historique recent de la conversation:\n{format_history(state['thread_id'])}\n\n"
             f"Question utilisateur:\n{state['question']}\n\n"
             f"Contexte RAG disponible:\n{state.get('context', '')}\n\n"
-            "Réponds comme MwanaBot, en français, avec une aide concrète."
+            "Reponds comme MwanaBot, en francais, avec une aide concrete."
         )
         response = await llm.ainvoke([SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=prompt)])
-        return {**state, "answer": str(response.content)}
+        answer = str(response.content)
+        session_memory.append(state["thread_id"], "assistant", answer)
+        return {**state, "answer": answer}
 
     workflow = StateGraph(MwanaBotState)
     workflow.add_node("retrieve", retrieve)
@@ -62,5 +80,4 @@ def build_graph(settings: Settings):
     workflow.set_entry_point("retrieve")
     workflow.add_edge("retrieve", "generate")
     workflow.add_edge("generate", END)
-    return workflow.compile()
-
+    return workflow.compile(checkpointer=MemorySaver())
