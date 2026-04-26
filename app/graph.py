@@ -20,6 +20,10 @@ class MwanaBotState(TypedDict, total=False):
     context: str
     sources: list[dict]
     answer: str
+    # Pre-resolved SchoolFees data — populated upstream by main.chat()
+    # before the graph runs. The generate node folds it into the prompt
+    # so the LLM grounds its answer in the user's real account data.
+    tool_observations: str
 
 
 def format_history(thread_id: str) -> str:
@@ -62,12 +66,23 @@ def build_graph(settings: Settings):
     async def generate(state: MwanaBotState) -> MwanaBotState:
         username = state.get("username") or "Non fourni"
         role = state.get("role") or state.get("namespace") or "Non fourni"
+        tool_observations = state.get("tool_observations") or ""
+        tool_section = (
+            f"Données récupérées via les outils SchoolFees :\n{tool_observations}\n\n"
+            if tool_observations
+            else ""
+        )
         prompt = (
-            f"Utilisateur authentifie:\nNom: {username}\nRole: {role}\n\n"
-            f"Historique recent de la conversation:\n{format_history(state['thread_id'])}\n\n"
+            f"Utilisateur authentifié:\nNom: {username}\nRôle: {role}\n\n"
+            f"Historique récent de la conversation:\n{format_history(state['thread_id'])}\n\n"
             f"Question utilisateur:\n{state['question']}\n\n"
+            f"{tool_section}"
             f"Contexte RAG disponible:\n{state.get('context', '')}\n\n"
-            "Reponds comme MwanaBot, en francais, avec une aide concrete."
+            "Réponds comme MwanaBot, en français, avec une aide concrète. "
+            "Si les données outils ci-dessus contiennent la réponse, base-toi "
+            "dessus en priorité (ce sont des données réelles du compte de "
+            "l'utilisateur). N'invente jamais de chiffre, date ou nom qui "
+            "ne figurerait pas dans les données outils ou le contexte RAG."
         )
         response = await llm.ainvoke([SystemMessage(content=SYSTEM_PROMPT), HumanMessage(content=prompt)])
         answer = str(response.content)
